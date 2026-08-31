@@ -1,149 +1,281 @@
 import React, { useState } from 'react';
+import { Search, Send, Calendar, Building2, Phone, FileSpreadsheet, Share2, Briefcase, Plus } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
-export default function App() {
-  const [tableData, setTableData] = useState([
-    { sno: 1, itemName: "LED Display P4", category: "Displays", qty: 15, status: "In Stock" },
-    { sno: 2, itemName: "Power Supply 5V", category: "Electronics", qty: 40, status: "Low Stock" }
-  ]);
-  
-  const [columns, setColumns] = useState(["sno", "itemName", "category", "qty", "status"]);
+// Qatar Public Holidays List
+const QATAR_PUBLIC_HOLIDAYS = ['2026-02-10', '2026-12-18'];
 
-  // புதிய டேட்டாவை டைப் செய்து சேர்க்கும் ஃபார்ம் ஸ்டேட்
-  const [newItem, setNewItem] = useState({
-    sno: "",
-    itemName: "",
-    category: "",
-    qty: "",
-    status: ""
+const InitialWorkersMaster = [
+  { workerCode: 'Q-101', name: 'Ramesh Kumar', company: 'SIGNMAX TRADING WLL', phone: '97433123456', dept: 'Civil Construction', profession: 'Mason / Bricklayer', monthlyAbsent: 2, yearlyAbsent: 5, regularHours: 208, weekdayOtHours: 20, holidayOtHours: 8, hourlyRate: 15 },
+  { workerCode: 'Q-102', name: 'Vijay Anand', company: 'SIGNMAX TRADING WLL', phone: '97455678901', dept: 'MEP (Mechanical)', profession: 'HVAC Technician', monthlyAbsent: 0, yearlyAbsent: 2, regularHours: 208, weekdayOtHours: 10, holidayOtHours: 0, hourlyRate: 18 },
+  { workerCode: 'Q-103', name: 'Anitha Roy', company: 'SAFEGARD WLL', phone: '97466789012', dept: 'Electrical', profession: 'Electrician', monthlyAbsent: 3, yearlyAbsent: 11, regularHours: 190, weekdayOtHours: 15, holidayOtHours: 12, hourlyRate: 15 },
+  { workerCode: 'Q-104', name: 'Priya Sharma', company: 'SAFEGARD WLL', phone: '97477890123', dept: 'Logistics', profession: 'Heavy Vehicle Driver', monthlyAbsent: 1, yearlyAbsent: 3, regularHours: 208, weekdayOtHours: 0, holidayOtHours: 0, hourlyRate: 20 },
+  { workerCode: 'Q-105', name: 'Karthik Raja', company: 'SIGNMAX TRADING WLL', phone: '97455112233', dept: 'Maintenance', profession: 'Welder (6G)', monthlyAbsent: 0, yearlyAbsent: 1, regularHours: 208, weekdayOtHours: 25, holidayOtHours: 10, hourlyRate: 17 },
+];
+
+export default function QatarCompanyApp() {
+  const [workers, setWorkers] = useState(InitialWorkersMaster);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCompany, setSelectedCompany] = useState('ALL');
+  
+  // New Worker Form Modal Toggle
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newWorker, setNewWorker] = useState({
+    workerCode: '', name: '', company: 'SIGNMAX TRADING WLL', phone: '', dept: '', profession: '',
+    monthlyAbsent: 0, yearlyAbsent: 0, regularHours: 208, weekdayOtHours: 0, holidayOtHours: 0, hourlyRate: 15
   });
 
-  // எக்செல் ஃபைலை ரீட் செய்யும் ஃபங்ஷன்
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const hrPhone = '97433000111';
+  const gmPhone = '97433000222';
 
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const bstr = evt.target.result;
-      const wb = XLSX.read(bstr, { type: 'binary' });
-      const wsname = wb.SheetNames[0];
-      const ws = wb.Sheets[wsname];
-      const data = XLSX.utils.sheet_to_json(ws);
-      
-      if (data.length > 0) {
-        setTableData(data);
-        setColumns(Object.keys(data[0]));
-      }
-    };
-    reader.readAsBinaryString(file);
+  // Qatar Labor Law Calculations (Article 74)
+  const calculateMonthlyPayout = (w) => {
+    const weekdayOtPay = w.weekdayOtHours * w.hourlyRate * 1.25;
+    const holidayOtPay = w.holidayOtHours * w.hourlyRate * 1.50;
+    const totalOtPay = weekdayOtPay + holidayOtPay;
+    return { weekdayOtPay, holidayOtPay, totalOtPay };
   };
 
-  // இன்புட்டில் டைப் செய்வதை சேமிக்க
-  const handleInputChange = (e) => {
-    setNewItem({ ...newItem, [e.target.name]: e.target.value });
-  };
-
-  // புதிய ரோவை டேபிளில் சேர்க்க
-  const handleAddRow = (e) => {
+  // Add New Worker Function
+  const handleAddWorker = (e) => {
     e.preventDefault();
-    if (!newItem.itemName) return;
-    setTableData([...tableData, newItem]);
-    // ஃபார்மை க்ளியர் செய்ய
-    setNewItem({ sno: tableData.length + 1, itemName: "", category: "", qty: "", status: "" });
+    if (!newWorker.workerCode || !newWorker.name) return alert('Worker Code and Name are required!');
+    setWorkers([...workers, newWorker]);
+    setShowAddForm(false);
+    setNewWorker({ workerCode: '', name: '', company: 'SIGNMAX TRADING WLL', phone: '', dept: '', profession: '', monthlyAbsent: 0, yearlyAbsent: 0, regularHours: 208, weekdayOtHours: 0, holidayOtHours: 0, hourlyRate: 15 });
   };
+
+  // 1. Export Full Master Sheet to Excel with Company Name
+  const exportToExcel = () => {
+    const excelData = filteredWorkers.map(w => {
+      const { weekdayOtPay, holidayOtPay, totalOtPay } = calculateMonthlyPayout(w);
+      return {
+        'Company Name': w.company,
+        'Worker Code': w.workerCode,
+        'Worker Name': w.name,
+        'Department': w.dept,
+        'Profession / Designation': w.profession,
+        'WhatsApp Phone': w.phone,
+        'Monthly Absent (Days)': w.monthlyAbsent,
+        'Yearly Absent (Days)': w.yearlyAbsent,
+        'Regular Hours': w.regularHours,
+        'Weekday OT Hours (1.25x)': w.weekdayOtHours,
+        'Holiday OT Hours (1.50x)': w.holidayOtHours,
+        'Total OT Payout (QR)': totalOtPay.toFixed(2)
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Company OT Report");
+    XLSX.writeFile(workbook, `${selectedCompany}_Workers_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
+  // 2. Share Individual Worker Report via WhatsApp
+  const sendWorkerReport = (worker) => {
+    const { totalOtPay } = calculateMonthlyPayout(worker);
+    const message = `*${worker.company.toUpperCase()} - OFFICIAL OT STATEMENT*%0A` +
+      `----------------------------------%0A` +
+      `*Worker Code:* ${worker.workerCode}%0A` +
+      `*Name:* ${worker.name}%0A` +
+      `*Department:* ${worker.dept}%0A` +
+      `*Profession:* ${worker.profession}%0A` +
+      `----------------------------------%0A` +
+      `*Monthly Absent:* ${worker.monthlyAbsent} Days%0A` +
+      `*Yearly Absent:* ${worker.yearlyAbsent} Days%0A` +
+      `----------------------------------%0A` +
+      `*Weekday OT (1.25x):* ${worker.weekdayOtHours} hrs%0A` +
+      `*Holiday OT (1.50x):* ${worker.holidayOtHours} hrs%0A` +
+      `*TOTAL OT PAY:* *QR ${totalOtPay.toFixed(2)}*%0A` +
+      `----------------------------------%0A` +
+      `Statement generated for 10th Monthly Payroll Cycle. Contact HR for queries.`;
+
+    window.open(`https://wa.me/${worker.phone}?text=${message}`, '_blank');
+  };
+
+  // 3. Share Executive Summary to HR/GM via WhatsApp
+  const shareSummaryToManager = (targetPhone, role) => {
+    const totalOTHours = filteredWorkers.reduce((acc, curr) => acc + curr.weekdayOtHours + curr.holidayOtHours, 0);
+    const totalOTPayout = filteredWorkers.reduce((acc, curr) => acc + calculateMonthlyPayout(curr).totalOtPay, 0);
+    const companyHeader = selectedCompany === 'ALL' ? 'SIGNMAX TRADING WLL & SAFEGARD WLL' : selectedCompany;
+
+    const message = `*${companyHeader.toUpperCase()} - EXECUTIVE OVERTIME REPORT*%0A` +
+      `*Role:* ${role}%0A` +
+      `----------------------------------%0A` +
+      `*Total Workforce Count:* ${filteredWorkers.length} Workers%0A` +
+      `*Total OT Hours Logged:* ${totalOTHours} Hours%0A` +
+      `*Total OT Amount Disbursed:* *QR ${totalOTPayout.toFixed(2)}*%0A` +
+      `----------------------------------%0A` +
+      `Master Excel Report generated and ready for 10th salary audit.`;
+
+    window.open(`https://wa.me/${targetPhone}?text=${message}`, '_blank');
+  };
+
+  const filteredWorkers = workers.filter(w => {
+    const matchesSearch = w.workerCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          w.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          w.dept.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          w.profession.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCompany = selectedCompany === 'ALL' || w.company === selectedCompany;
+    return matchesSearch && matchesCompany;
+  });
 
   return (
-    <div style={{ padding: "30px", fontFamily: "Arial, sans-serif", maxWidth: "1200px", margin: "0 auto" }}>
-      <h2>Signmax Safeguard - Dashboard & Excel Viewer</h2>
-      
-      {/* 1. நேரடியாக டைப் செய்து சேர்க்கும் ஃபார்ம் */}
-      <div style={{ margin: "20px 0", padding: "20px", border: "1px solid #ccc", borderRadius: "8px", background: "#fdfdfd", boxShadow: "0 0 5px rgba(0,0,0,0.05)" }}>
-        <h3 style={{ marginTop: "0", color: "#333" }}>புதிய தரவை நேரடியாகச் சேர்க்க (Add New Entry):</h3>
-        <form onSubmit={handleAddRow} style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-          <input 
-            type="number" 
-            name="sno" 
-            placeholder="S.No" 
-            value={newItem.sno} 
-            onChange={handleInputChange} 
-            style={{ padding: "8px", flex: "1", minWidth: "80px" }} 
-          />
-          <input 
-            type="text" 
-            name="itemName" 
-            placeholder="Item Name" 
-            value={newItem.itemName} 
-            onChange={handleInputChange} 
-            style={{ padding: "8px", flex: "2", minWidth: "150px" }} 
-            required 
-          />
-          <input 
-            type="text" 
-            name="category" 
-            placeholder="Category" 
-            value={newItem.category} 
-            onChange={handleInputChange} 
-            style={{ padding: "8px", flex: "1", minWidth: "120px" }} 
-          />
-          <input 
-            type="text" 
-            name="qty" 
-            placeholder="Quantity" 
-            value={newItem.qty} 
-            onChange={handleInputChange} 
-            style={{ padding: "8px", flex: "1", minWidth: "80px" }} 
-          />
-          <input 
-            type="text" 
-            name="status" 
-            placeholder="Status" 
-            value={newItem.status} 
-            onChange={handleInputChange} 
-            style={{ padding: "8px", flex: "1", minWidth: "100px" }} 
-          />
-          <button type="submit" style={{ padding: "8px 20px", background: "#0070f3", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>
-            Add
+    <div className="min-h-screen bg-slate-50 p-6 font-sans">
+      {/* Top Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div>
+          <div className="flex items-center gap-2 text-indigo-600 font-bold text-xs uppercase tracking-wider mb-1">
+            <Building2 size={16} /> SIGNMAX TRADING W.L.L. & SAFEGARD W.L.L. • Qatar
+          </div>
+          <h1 className="text-2xl font-bold text-slate-800">200 Workers Management & OT Dispatcher</h1>
+        </div>
+
+        {/* Global Action Buttons */}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded-lg text-sm transition shadow-sm"
+          >
+            <Plus size={16} /> Add Worker
           </button>
-        </form>
+
+          <button
+            onClick={exportToExcel}
+            className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-medium px-4 py-2 rounded-lg text-sm transition shadow-sm"
+          >
+            <FileSpreadsheet size={16} /> Export Excel
+          </button>
+
+          <button
+            onClick={() => shareSummaryToManager(hrPhone, 'HR Manager')}
+            className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-medium px-3 py-2 rounded-lg text-xs transition shadow-sm"
+          >
+            <Share2 size={14} /> Send HR Report
+          </button>
+
+          <button
+            onClick={() => shareSummaryToManager(gmPhone, 'General Manager')}
+            className="flex items-center gap-1.5 bg-purple-700 hover:bg-purple-800 text-white font-medium px-3 py-2 rounded-lg text-xs transition shadow-sm"
+          >
+            <Share2 size={14} /> Send GM Report
+          </button>
+        </div>
       </div>
 
-      {/* 2. எக்செல் ஃபைல் அப்லோட் செய்யும் பாக்ஸ் */}
-      <div style={{ margin: "20px 0", padding: "15px", border: "2px dashed #0070f3", borderRadius: "8px", background: "#f9f9f9" }}>
-        <label style={{ fontWeight: "bold", display: "block", marginBottom: "8px" }}>
-          (அல்லது) எக்செல் ஃபைலை அப்லோட் செய்யவும் (.xlsx / .xls):
-        </label>
-        <input type="file" accept=".xlsx, .xls" onChange={handleFileUpload} />
+      {/* Company Filter & Search Input */}
+      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-6 flex flex-col sm:flex-row gap-4 justify-between items-center">
+        <div className="relative w-full sm:w-96">
+          <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
+          <input
+            type="text"
+            placeholder="Search Worker Code, Name, Dept or Profession..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+
+        {/* Company Filter Dropdown */}
+        <div className="w-full sm:w-auto">
+          <select
+            value={selectedCompany}
+            onChange={(e) => setSelectedCompany(e.target.value)}
+            className="w-full sm:w-auto border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+          >
+            <option value="ALL">All Companies (SIGNMAX & SAFEGARD)</option>
+            <option value="SIGNMAX TRADING WLL">SIGNMAX TRADING W.L.L.</option>
+            <option value="SAFEGARD WLL">SAFEGARD W.L.L.</option>
+          </select>
+        </div>
       </div>
 
-      {/* 3. டேட்டா டேபிள் */}
-      {tableData.length > 0 ? (
-        <div style={{ overflowX: "auto", marginTop: "20px" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", background: "white", boxShadow: "0 0 10px rgba(0,0,0,0.1)" }}>
+      {/* Main Table */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse text-sm">
             <thead>
-              <tr style={{ background: "#0070f3", color: "white", textAlign: "left" }}>
-                {columns.map((col, index) => (
-                  <th key={index} style={{ padding: "12px", border: "1px solid #ddd" }}>{col.toUpperCase()}</th>
-                ))}
+              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-[11px] font-semibold tracking-wider">
+                <th className="p-4">Company</th>
+                <th className="p-4">Worker Code</th>
+                <th className="p-4">Name</th>
+                <th className="p-4">Department</th>
+                <th className="p-4">Profession</th>
+                <th className="p-4">Monthly Absent</th>
+                <th className="p-4">Yearly Absent</th>
+                <th className="p-4">OT Pay (QR)</th>
+                <th className="p-4 text-center">Action</th>
               </tr>
             </thead>
-            <tbody>
-              {tableData.map((row, rowIndex) => (
-                <tr key={rowIndex} style={{ background: rowIndex % 2 === 0 ? "#f9f9f9" : "white" }}>
-                  {columns.map((col, colIndex) => (
-                    <td key={colIndex} style={{ padding: "10px", border: "1px solid #ddd" }}>
-                      {row[col]}
+            <tbody className="divide-y divide-slate-100">
+              {filteredWorkers.map((worker) => {
+                const { totalOtPay } = calculateMonthlyPayout(worker);
+
+                return (
+                  <tr key={worker.workerCode} className="hover:bg-slate-50 transition">
+                    <td className="p-4 font-bold text-xs text-slate-600">
+                      <span className={`px-2 py-1 rounded ${worker.company.includes('SIGNMAX') ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
+                        {worker.company}
+                      </span>
                     </td>
-                  ))}
-                </tr>
-              ))}
+                    <td className="p-4 font-mono font-bold text-indigo-600 bg-indigo-50/50">{worker.workerCode}</td>
+                    <td className="p-4 font-semibold text-slate-800">{worker.name}</td>
+                    <td className="p-4 text-slate-700 font-medium">{worker.dept}</td>
+                    <td className="p-4">
+                      <span className="flex items-center gap-1.5 text-indigo-900 font-semibold bg-indigo-50 px-2.5 py-1 rounded-md text-xs border border-indigo-100 w-max">
+                        <Briefcase size={13} className="text-indigo-600" />
+                        {worker.profession}
+                      </span>
+                    </td>
+                    <td className="p-4 text-slate-700 font-bold">{worker.monthlyAbsent} Days</td>
+                    <td className="p-4 text-slate-700 font-bold">{worker.yearlyAbsent} Days</td>
+                    <td className="p-4 font-bold text-emerald-600">QR {totalOtPay.toFixed(2)}</td>
+                    <td className="p-4 text-center">
+                      <button
+                        onClick={() => sendWorkerReport(worker)}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 justify-center mx-auto transition shadow-sm"
+                      >
+                        <Send size={14} /> Send WhatsApp
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
-      ) : (
-        <p style={{ color: "#666", fontStyle: "italic", marginTop: "20px" }}>
-          தரவுகள் எதுவும் இல்லை. மேலே உள்ள ஃபார்ம் மூலமாகவோ அல்லது எக்செல் ஃபைல் மூலமாகவோ சேர்க்கவும்.
-        </p>
+      </div>
+
+      {/* Add Worker Modal Form */}
+      {showAddForm && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl">
+            <h3 className="text-lg font-bold text-slate-800 mb-4">Add Worker to Company System</h3>
+            <form onSubmit={handleAddWorker} className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-600">Select Company</label>
+                <select 
+                  value={newWorker.company} 
+                  onChange={(e) => setNewWorker({...newWorker, company: e.target.value})}
+                  className="w-full p-2 border rounded-lg text-sm mt-1"
+                >
+                  <option value="SIGNMAX TRADING WLL">SIGNMAX TRADING W.L.L.</option>
+                  <option value="SAFEGARD WLL">SAFEGARD W.L.L.</option>
+                </select>
+              </div>
+              <input type="text" placeholder="Worker Code (e.g. Q-106)" value={newWorker.workerCode} onChange={(e) => setNewWorker({...newWorker, workerCode: e.target.value})} className="w-full p-2 border rounded-lg text-sm" required />
+              <input type="text" placeholder="Full Name" value={newWorker.name} onChange={(e) => setNewWorker({...newWorker, name: e.target.value})} className="w-full p-2 border rounded-lg text-sm" required />
+              <input type="text" placeholder="WhatsApp Phone (e.g. 97433000000)" value={newWorker.phone} onChange={(e) => setNewWorker({...newWorker, phone: e.target.value})} className="w-full p-2 border rounded-lg text-sm" required />
+              <input type="text" placeholder="Department (e.g. Logistics)" value={newWorker.dept} onChange={(e) => setNewWorker({...newWorker, dept: e.target.value})} className="w-full p-2 border rounded-lg text-sm" required />
+              <input type="text" placeholder="Profession (e.g. Driver)" value={newWorker.profession} onChange={(e) => setNewWorker({...newWorker, profession: e.target.value})} className="w-full p-2 border rounded-lg text-sm" required />
+              
+              <div className="flex justify-end gap-2 pt-3">
+                <button type="button" onClick={() => setShowAddForm(false)} className="px-4 py-2 border rounded-lg text-sm font-medium text-slate-600">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium">Save Worker</button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
