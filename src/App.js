@@ -25,7 +25,7 @@ export default function QatarCompanyApp() {
   const [otMonthData, setOtMonthData] = useState({
     year: 2026,
     month: 3, // March by default
-    workedHoursInput: 220, // Total hours logged by worker in month
+    workedHoursInput: 220,
   });
 
   const [newWorker, setNewWorker] = useState({
@@ -48,7 +48,7 @@ export default function QatarCompanyApp() {
       }
     }
     const workingDaysCount = totalDaysInMonth - fridaysCount;
-    const standardRegularHours = workingDaysCount * 8; // standard 8 hours per working day
+    const standardRegularHours = workingDaysCount * 8;
 
     return { totalDaysInMonth, fridaysCount, workingDaysCount, standardRegularHours };
   };
@@ -59,10 +59,8 @@ export default function QatarCompanyApp() {
     const regularHours = Math.min(totalInputHours, stats.standardRegularHours);
     const excessHours = Math.max(0, totalInputHours - stats.standardRegularHours);
     
-    // Split excess hours between Weekday OT and Holiday/Friday OT based on ratio or default distribution
-    // For Qatar law: Fridays are weekly rest days. If worked, paid at holiday rate (1.50x) or regular + premium.
-    const holidayOtHours = Math.round(excessHours * 0.4); // Estimated portion on Fridays/Holidays
-    const weekdayOtHours = excessHours - holidayOtHours; // Remaining excess as weekday OT (1.25x)
+    const holidayOtHours = Math.round(excessHours * 0.4); 
+    const weekdayOtHours = excessHours - holidayOtHours;
 
     const weekdayOtPay = weekdayOtHours * worker.hourlyRate * 1.25;
     const holidayOtPay = holidayOtHours * worker.hourlyRate * 1.50;
@@ -79,7 +77,6 @@ export default function QatarCompanyApp() {
     };
   };
 
-  // Qatar Labor Law Calculations for general list
   const calculateMonthlyPayout = (w) => {
     const weekdayOtPay = w.weekdayOtHours * w.hourlyRate * 1.25;
     const holidayOtPay = w.holidayOtHours * w.hourlyRate * 1.50;
@@ -87,7 +84,6 @@ export default function QatarCompanyApp() {
     return { weekdayOtPay, holidayOtPay, totalOtPay };
   };
 
-  // Save Dynamic OT back to worker record
   const handleSaveDynamicOt = (e) => {
     e.preventDefault();
     if (!selectedWorkerForOt) return;
@@ -109,10 +105,8 @@ export default function QatarCompanyApp() {
     setWorkers(updatedWorkers);
     setShowOtModal(false);
     setSelectedWorkerForOt(null);
-    alert(`Successfully updated OT for ${selectedWorkerForOt.name}!\nWorking Days: ${breakdown.stats.workingDaysCount} | Fridays: ${breakdown.stats.fridaysCount}\nWeekday OT: ${breakdown.weekdayOtHours} hrs | Holiday OT: ${breakdown.holidayOtHours} hrs`);
   };
 
-  // Add New Worker Function
   const handleAddWorker = (e) => {
     e.preventDefault();
     if (!newWorker.workerCode || !newWorker.name) return alert('Worker Code and Name are required!');
@@ -121,7 +115,6 @@ export default function QatarCompanyApp() {
     setNewWorker({ workerCode: '', name: '', company: 'SIGNMAX TRADING WLL', phone: '', dept: '', profession: '', monthlyAbsent: 0, yearlyAbsent: 0, regularHours: 208, weekdayOtHours: 0, holidayOtHours: 0, hourlyRate: 15 });
   };
 
-  // Export to Excel
   const exportToExcel = () => {
     const excelData = filteredWorkers.map(w => {
       const { weekdayOtPay, holidayOtPay, totalOtPay } = calculateMonthlyPayout(w);
@@ -147,7 +140,6 @@ export default function QatarCompanyApp() {
     XLSX.writeFile(workbook, `${selectedCompany}_Workers_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
-  // Share Individual Worker Report via WhatsApp
   const sendWorkerReport = (worker) => {
     const { totalOtPay } = calculateMonthlyPayout(worker);
     const message = `*${worker.company.toUpperCase()} - OFFICIAL OT STATEMENT*%0A` +
@@ -156,9 +148,6 @@ export default function QatarCompanyApp() {
       `*Name:* ${worker.name}%0A` +
       `*Department:* ${worker.dept}%0A` +
       `*Profession:* ${worker.profession}%0A` +
-      `----------------------------------%0A` +
-      `*Monthly Absent:* ${worker.monthlyAbsent} Days%0A` +
-      `*Yearly Absent:* ${worker.yearlyAbsent} Days%0A` +
       `----------------------------------%0A` +
       `*Regular Hours:* ${worker.regularHours} hrs%0A` +
       `*Weekday OT (1.25x):* ${worker.weekdayOtHours} hrs%0A` +
@@ -170,7 +159,6 @@ export default function QatarCompanyApp() {
     window.open(`https://wa.me/${worker.phone}?text=${message}`, '_blank');
   };
 
-  // Share Executive Summary
   const shareSummaryToManager = (targetPhone, role) => {
     const totalOTHours = filteredWorkers.reduce((acc, curr) => acc + curr.weekdayOtHours + curr.holidayOtHours, 0);
     const totalOTPayout = filteredWorkers.reduce((acc, curr) => acc + calculateMonthlyPayout(curr).totalOtPay, 0);
@@ -198,28 +186,28 @@ export default function QatarCompanyApp() {
   });
 
   return (
-    <div className="min-h-screen bg-sky-100 p-6 font-sans">
+    <div className="min-h-screen bg-sky-100 p-4 sm:p-6 font-sans">
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 bg-white/80 backdrop-blur-md p-5 rounded-2xl shadow-sm border border-sky-200">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 bg-white/90 backdrop-blur-md p-5 rounded-2xl shadow-sm border border-sky-200">
         <div>
           <div className="flex items-center gap-2 text-sky-700 font-bold text-xs uppercase tracking-wider mb-1">
             <Building2 size={16} /> SIGNMAX TRADING W.L.L. & SAFEGARD W.L.L. • Qatar
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Worker Management & Dynamic OT Dispatcher</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Worker Management & Dynamic OT Dispatcher</h1>
         </div>
 
         {/* Global Action Buttons */}
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setShowAddForm(true)}
-            className="flex items-center gap-1.5 bg-sky-600 hover:bg-sky-700 text-white font-medium px-4 py-2 rounded-lg text-sm transition shadow-sm"
+            className="flex items-center gap-1.5 bg-sky-600 hover:bg-sky-700 text-white font-medium px-3.5 py-2 rounded-lg text-xs sm:text-sm transition shadow-sm"
           >
             <Plus size={16} /> Add Worker
           </button>
 
           <button
             onClick={exportToExcel}
-            className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-medium px-4 py-2 rounded-lg text-sm transition shadow-sm"
+            className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-medium px-3.5 py-2 rounded-lg text-xs sm:text-sm transition shadow-sm"
           >
             <FileSpreadsheet size={16} /> Export Excel
           </button>
@@ -243,7 +231,7 @@ export default function QatarCompanyApp() {
       {/* Company Filter & Search Input */}
       <div className="bg-white/90 backdrop-blur-md p-4 rounded-xl border border-sky-200 shadow-sm mb-6 flex flex-col sm:flex-row gap-4 justify-between items-center">
         <div className="relative w-full sm:w-96">
-          <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
+          <Search className="absolute left-3 top-3 text-slate-400" size={18} />
           <input
             type="text"
             placeholder="Search Worker Code, Name, Dept or Profession..."
@@ -267,21 +255,21 @@ export default function QatarCompanyApp() {
         </div>
       </div>
 
-      {/* Main Table */}
+      {/* Main Table Container with Fixed Layout & Spacing */}
       <div className="bg-white rounded-xl border border-sky-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-sm">
+          <table className="w-full text-left border-collapse text-sm min-w-[1000px]">
             <thead>
-              <tr className="bg-sky-50 border-b border-sky-200 text-slate-600 uppercase text-[11px] font-semibold tracking-wider">
-                <th className="p-4">Company</th>
-                <th className="p-4">Worker Code</th>
-                <th className="p-4">Name</th>
-                <th className="p-4">Department</th>
-                <th className="p-4">Profession</th>
-                <th className="p-4">Reg. Hours</th>
-                <th className="p-4">OT Breakdown (Wk / Hol)</th>
-                <th className="p-4">OT Pay (QR)</th>
-                <th className="p-4 text-center">Actions</th>
+              <tr className="bg-sky-50/80 border-b border-sky-200 text-slate-700 uppercase text-[11px] font-bold tracking-wider">
+                <th className="py-3.5 px-4 w-[16%]">Company</th>
+                <th className="py-3.5 px-4 w-[10%]">Code</th>
+                <th className="py-3.5 px-4 w-[14%]">Name</th>
+                <th className="py-3.5 px-4 w-[14%]">Department</th>
+                <th className="py-3.5 px-4 w-[14%]">Profession</th>
+                <th className="py-3.5 px-4 w-[8%]">Reg. Hours</th>
+                <th className="py-3.5 px-4 w-[12%]">OT Breakdown</th>
+                <th className="py-3.5 px-4 w-[10%]">OT Pay (QR)</th>
+                <th className="py-3.5 px-4 w-[14%] text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-sky-100">
@@ -289,43 +277,45 @@ export default function QatarCompanyApp() {
                 const { totalOtPay } = calculateMonthlyPayout(worker);
 
                 return (
-                  <tr key={worker.workerCode} className="hover:bg-sky-50/50 transition">
-                    <td className="p-4 font-bold text-xs text-slate-600">
-                      <span className={`px-2 py-1 rounded ${worker.company.includes('SIGNMAX') ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
+                  <tr key={worker.workerCode} className="hover:bg-sky-50/40 transition">
+                    <td className="py-3 px-4 align-middle">
+                      <span className={`inline-block px-2 py-1 rounded text-[11px] font-bold truncate max-w-full ${worker.company.includes('SIGNMAX') ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
                         {worker.company}
                       </span>
                     </td>
-                    <td className="p-4 font-mono font-bold text-sky-700 bg-sky-50/50">{worker.workerCode}</td>
-                    <td className="p-4 font-semibold text-slate-800">{worker.name}</td>
-                    <td className="p-4 text-slate-700 font-medium">{worker.dept}</td>
-                    <td className="p-4">
-                      <span className="flex items-center gap-1.5 text-sky-900 font-semibold bg-sky-50 px-2.5 py-1 rounded-md text-xs border border-sky-100 w-max">
-                        <Briefcase size={13} className="text-sky-600" />
-                        {worker.profession}
+                    <td className="py-3 px-4 font-mono font-bold text-sky-700 bg-sky-50/30 align-middle">{worker.workerCode}</td>
+                    <td className="py-3 px-4 font-semibold text-slate-800 align-middle">{worker.name}</td>
+                    <td className="py-3 px-4 text-slate-700 font-medium align-middle">{worker.dept}</td>
+                    <td className="py-3 px-4 align-middle">
+                      <span className="inline-flex items-center gap-1.5 text-sky-900 font-semibold bg-sky-50 px-2 py-1 rounded-md text-xs border border-sky-100">
+                        <Briefcase size={12} className="text-sky-600 shrink-0" />
+                        <span className="truncate">{worker.profession}</span>
                       </span>
                     </td>
-                    <td className="p-4 text-slate-700 font-bold">{worker.regularHours} hrs</td>
-                    <td className="p-4 text-xs text-slate-600 font-medium">
+                    <td className="py-3 px-4 text-slate-700 font-bold align-middle">{worker.regularHours}h</td>
+                    <td className="py-3 px-4 text-xs text-slate-600 font-medium align-middle">
                       <span className="text-indigo-600 font-bold">{worker.weekdayOtHours}h Wk</span> / <span className="text-amber-600 font-bold">{worker.holidayOtHours}h Hol</span>
                     </td>
-                    <td className="p-4 font-bold text-emerald-600">QR {totalOtPay.toFixed(2)}</td>
-                    <td className="p-4 text-center flex items-center justify-center gap-2">
-                      <button
-                        onClick={() => {
-                          setSelectedWorkerForOt(worker);
-                          setShowOtModal(true);
-                        }}
-                        className="bg-sky-600 hover:bg-sky-700 text-white font-medium px-2.5 py-1.5 rounded-lg text-xs flex items-center gap-1 transition shadow-sm"
-                        title="Calculate Monthly OT with Friday breakdown"
-                      >
-                        <Calculator size={14} /> OT Setup
-                      </button>
-                      <button
-                        onClick={() => sendWorkerReport(worker)}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-2.5 py-1.5 rounded-lg text-xs flex items-center gap-1 transition shadow-sm"
-                      >
-                        <Send size={14} /> WhatsApp
-                      </button>
+                    <td className="py-3 px-4 font-bold text-emerald-600 align-middle">QR {totalOtPay.toFixed(2)}</td>
+                    <td className="py-3 px-4 text-center align-middle">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={() => {
+                            setSelectedWorkerForOt(worker);
+                            setShowOtModal(true);
+                          }}
+                          className="bg-sky-600 hover:bg-sky-700 text-white font-medium px-2.5 py-1.5 rounded-lg text-xs flex items-center gap-1 transition shadow-sm"
+                          title="Calculate Monthly OT with Friday breakdown"
+                        >
+                          <Calculator size={13} /> OT Setup
+                        </button>
+                        <button
+                          onClick={() => sendWorkerReport(worker)}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-2.5 py-1.5 rounded-lg text-xs flex items-center gap-1 transition shadow-sm"
+                        >
+                          <Send size={13} /> WhatsApp
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -454,7 +444,7 @@ export default function QatarCompanyApp() {
               <input type="text" placeholder="Full Name" value={newWorker.name} onChange={(e) => setNewWorker({...newWorker, name: e.target.value})} className="w-full p-2 border border-sky-200 rounded-lg text-sm" required />
               <input type="text" placeholder="WhatsApp Phone (e.g. 97433000000)" value={newWorker.phone} onChange={(e) => setNewWorker({...newWorker, phone: e.target.value})} className="w-full p-2 border border-sky-200 rounded-lg text-sm" required />
               <input type="text" placeholder="Department (e.g. Logistics)" value={newWorker.dept} onChange={(e) => setNewWorker({...newWorker, dept: e.target.value})} className="w-full p-2 border border-sky-200 rounded-lg text-sm" required />
-              <input type="text" placeholder="Profession (e.g. Driver)" value={newWorkflowNameCheck => setNewWorker({...newWorker, profession: newWorkflowNameCheck.target.value})} className="w-full p-2 border border-sky-200 rounded-lg text-sm" required />
+              <input type="text" placeholder="Profession (e.g. Driver)" value={newWorker.profession} onChange={(e) => setNewWorker({...newWorker, profession: e.target.value})} className="w-full p-2 border border-sky-200 rounded-lg text-sm" required />
               
               <div className="flex justify-end gap-2 pt-3">
                 <button type="button" onClick={() => setShowAddForm(false)} className="px-4 py-2 border border-sky-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-sky-50">Cancel</button>
